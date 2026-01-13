@@ -30,22 +30,22 @@ Before starting the migration:
 
 ### Step 1: Clone This Repository
 
-\`\`\`bash
+```
 git clone https://github.com/YOUR_USERNAME/arm-migration-demo.git
 cd arm-migration-demo
-\`\`\`
+```
 
 ### Step 2: Open in VS Code
 
-\`\`\`bash
+```
 code .
-\`\`\`
+```
 
 ### Step 3: Configure MCP Servers
 
 Create \`.vscode/settings.json\`:
 
-\`\`\`json
+```
 {
   "github.copilot.chat.mcp.servers": {
     "arm-mcp": {
@@ -62,13 +62,13 @@ Create \`.vscode/settings.json\`:
     }
   }
 }
-\`\`\`
+```
 
 ### Step 4: Run the Migration
 
 Open GitHub Copilot Chat in VS Code and paste this prompt:
 
-\`\`\`
+```
 You are an ARM64 migration assistant using Docker MCP Toolkit.
 
 WORKFLOW:
@@ -93,7 +93,7 @@ DOCKERFILE UPDATES:
 
 Now migrate this application to ARM64. Scan the code, convert intrinsics, 
 update the Dockerfile, predict performance, and create a pull request.
-\`\`\`
+```
 
 ### Step 5: Review the Migration
 
@@ -109,7 +109,7 @@ GitHub Copilot will:
 
 Once the PR is created, test on an ARM system:
 
-\`\`\`bash
+```
 # On Apple Silicon Mac or AWS Graviton instance
 git fetch origin feature/arm64-migration
 git checkout feature/arm64-migration
@@ -119,7 +119,7 @@ g++ -O2 -march=native -o benchmark \\
     matrix_operations.cpp main.cpp -std=c++11
 
 ./benchmark
-\`\`\`
+```
 
 ## Expected Results
 
@@ -142,13 +142,4 @@ The automated migration will:
    - Loop adjustments for 128-bit vector width
    - Horizontal reduction logic rewritten
 
-## Learn More
 
-- [Docker MCP Toolkit Documentation](https://www.docker.com/products/mcp-catalog-and-toolkit/)
-- [Arm MCP Server GitHub](https://github.com/arm/mcp)
-- [AWS Graviton Performance Guide](https://aws.amazon.com/ec2/graviton/)
-- [ARM NEON Intrinsics Reference](https://developer.arm.com/architectures/instruction-sets/intrinsics/)
-
-## License
-
-MIT License - Feel free to use this code for learning and testing ARM migration workflows.
