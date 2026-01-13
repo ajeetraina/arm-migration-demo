@@ -8,63 +8,8 @@ This repository contains a sample C++ application that demonstrates ARM64 migrat
 - **main.cpp** - Benchmark driver
 - **Dockerfile** - CentOS 6 based build (x86-only, with EOL mirror workarounds)
 
-## The Migration Challenge
 
-This code won't work on ARM without modification:
-
-1. \`centos:6\` base image has no ARM64 support
-2. \`-mavx2\` compiler flag is x86-specific
-3. All \`_mm256_*\` intrinsics are Intel/AMD-only
-4. AVX2 processes 4 doubles per operation; ARM NEON processes 2
-
-## Prerequisites
-
-Before starting the migration:
-
-- Docker Desktop with MCP Toolkit enabled
-- VS Code with GitHub Copilot
-- Arm MCP Server, GitHub MCP Server, and Sequential Thinking MCP Server installed
-- Git configured with your GitHub credentials
-
-## How to Use This Demo
-
-### Step 1: Clone This Repository
-
-```
-git clone https://github.com/YOUR_USERNAME/arm-migration-demo.git
-cd arm-migration-demo
-```
-
-### Step 2: Open in VS Code
-
-```
-code .
-```
-
-### Step 3: Configure MCP Servers
-
-Create \`.vscode/settings.json\`:
-
-```
-{
-  "github.copilot.chat.mcp.servers": {
-    "arm-mcp": {
-      "command": "docker",
-      "args": ["mcp", "connect", "arm"]
-    },
-    "github-mcp": {
-      "command": "docker",
-      "args": ["mcp", "connect", "github"]
-    },
-    "sequential-thinking": {
-      "command": "docker",
-      "args": ["mcp", "connect", "sequential-thinking"]
-    }
-  }
-}
-```
-
-### Step 4: Run the Migration
+## Run the Migration
 
 Open GitHub Copilot Chat in VS Code and paste this prompt:
 
