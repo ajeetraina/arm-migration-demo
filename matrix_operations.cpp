@@ -3,7 +3,7 @@
 #include <random>
 #include <chrono>
 #include <stdexcept>
-#include <immintrin.h>  // AVX2 intrinsics
+#include <arm_neon.h>  // ARM NEON intrinsics
 
 Matrix::Matrix(size_t r, size_t c) : rows(r), cols(c) {
     data.resize(rows, std::vector<double>(cols, 0.0));
@@ -21,6 +21,15 @@ void Matrix::randomize() {
     }
 }
 
+void Matrix::print() const {
+    for (size_t i = 0; i < rows; i++) {
+        for (size_t j = 0; j < cols; j++) {
+            std::cout << data[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 Matrix Matrix::multiply(const Matrix& other) const {
     if (cols != other.rows) {
         throw std::runtime_error("Invalid matrix dimensions for multiplication");
@@ -28,31 +37,40 @@ Matrix Matrix::multiply(const Matrix& other) const {
 
     Matrix result(rows, other.cols);
 
-    // x86-64 optimized using AVX2 for double-precision
+    // ARM64 optimized using NEON for double-precision
     for (size_t i = 0; i < rows; i++) {
         for (size_t j = 0; j < other.cols; j++) {
-            __m256d sum_vec = _mm256_setzero_pd();
+            // Initialize sum vectors to zero (NEON processes 2 doubles at a time)
+            float64x2_t sum_vec1 = vdupq_n_f64(0.0);
+            float64x2_t sum_vec2 = vdupq_n_f64(0.0);
             size_t k = 0;
 
-            // Process 4 elements at a time with AVX2
+            // Process 4 elements at a time using two NEON vectors (2x2 doubles)
             for (; k + 3 < cols; k += 4) {
-                __m256d a_vec = _mm256_loadu_pd(&data[i][k]);
-                __m256d b_vec = _mm256_set_pd(
-                    other.data[k+3][j],
-                    other.data[k+2][j],
-                    other.data[k+1][j],
-                    other.data[k][j]
-                );
-                sum_vec = _mm256_add_pd(sum_vec, _mm256_mul_pd(a_vec, b_vec));
+                // Load first 2 elements from matrix A
+                float64x2_t a_vec1 = vld1q_f64(&data[i][k]);
+                
+                // Load second 2 elements from matrix A  
+                float64x2_t a_vec2 = vld1q_f64(&data[i][k + 2]);
+                
+                // Manually create vectors for matrix B elements
+                double b_arr1[2] = {other.data[k][j], other.data[k + 1][j]};
+                double b_arr2[2] = {other.data[k + 2][j], other.data[k + 3][j]};
+                
+                float64x2_t b_vec1 = vld1q_f64(b_arr1);
+                float64x2_t b_vec2 = vld1q_f64(b_arr2);
+                
+                // Multiply and accumulate
+                sum_vec1 = vaddq_f64(sum_vec1, vmulq_f64(a_vec1, b_vec1));
+                sum_vec2 = vaddq_f64(sum_vec2, vmulq_f64(a_vec2, b_vec2));
             }
 
-            // Horizontal add using AVX
-            __m128d sum_high = _mm256_extractf128_pd(sum_vec, 1);
-            __m128d sum_low = _mm256_castpd256_pd128(sum_vec);
-            __m128d sum_128 = _mm_add_pd(sum_low, sum_high);
-
+            // Sum the results from both NEON vectors
+            float64x2_t final_sum = vaddq_f64(sum_vec1, sum_vec2);
+            
+            // Extract and sum the elements horizontally
             double sum_arr[2];
-            _mm_storeu_pd(sum_arr, sum_128);
+            vst1q_f64(sum_arr, final_sum);
             double sum = sum_arr[0] + sum_arr[1];
 
             // Handle remaining elements
@@ -65,35 +83,4 @@ Matrix Matrix::multiply(const Matrix& other) const {
     }
 
     return result;
-}
-
-double Matrix::sum() const {
-    double total = 0.0;
-    for (size_t i = 0; i < rows; i++) {
-        for (size_t j = 0; j < cols; j++) {
-            total += data[i][j];
-        }
-    }
-    return total;
-}
-
-void benchmark_matrix_ops() {
-    std::cout << "\n=== Matrix Multiplication Benchmark ===" << std::endl;
-
-    const size_t size = 200;
-    Matrix a(size, size);
-    Matrix b(size, size);
-
-    a.randomize();
-    b.randomize();
-
-    auto start = std::chrono::high_resolution_clock::now();
-    Matrix c = a.multiply(b);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-    std::cout << "Matrix size: " << size << "x" << size << std::endl;
-    std::cout << "Time: " << duration.count() << " ms" << std::endl;
-    std::cout << "Result sum: " << c.sum() << std::endl;
 }
