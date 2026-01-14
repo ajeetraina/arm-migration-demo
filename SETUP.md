@@ -49,6 +49,5 @@ gh repo create arm-migration-demo --public --source=. --push
 Once pushed, your repository should be available at:
 \`https://github.com/YOUR_USERNAME/arm-migration-demo\`
 
-## Next Steps
 
-Update the blog post to reference your actual GitHub repository URL instead of placeholder text.
+
