@@ -9,7 +9,7 @@
 
 ## Option 2: Push to GitHub
 
-\`\`\`bash
+```bash
 # Navigate to the repository directory
 cd arm-migration-demo
 
@@ -28,13 +28,13 @@ git remote add origin https://github.com/YOUR_USERNAME/arm-migration-demo.git
 # Push to GitHub
 git branch -M main
 git push -u origin main
-\`\`\`
+```
 
 ## Option 3: Using GitHub CLI
 
 If you have GitHub CLI installed:
 
-\`\`\`bash
+```bash
 cd arm-migration-demo
 git init
 git add .
@@ -42,7 +42,7 @@ git commit -m "Initial commit: ARM migration demo with AVX2 intrinsics"
 
 # Create and push in one command
 gh repo create arm-migration-demo --public --source=. --push
-\`\`\`
+```
 
 ## Verify
 
