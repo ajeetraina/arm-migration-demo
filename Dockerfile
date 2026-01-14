@@ -1,36 +1,21 @@
-FROM centos:6
+# ARM64-compatible base image
+FROM rockylinux:9
 
-# CentOS 6 reached EOL, need to use vault mirrors
-RUN sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-Base.repo && \
-    sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Base.repo
+# Install build essentials using dnf (not yum)
+RUN dnf update -y && \
+    dnf groupinstall -y "Development Tools" && \
+    dnf install -y gcc-c++ cmake make && \
+    dnf clean all
 
-# Install EPEL repository (required for some development tools)
-RUN yum install -y epel-release && \
-    sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/epel.repo && \
-    sed -i 's|^#baseurl=http://download.fedoraproject.org/pub/epel|baseurl=http://archives.fedoraproject.org/pub/archive/epel|g' /etc/yum.repos.d/epel.repo
-
-# Install Developer Toolset 2 for better C++11 support (GCC 4.8)
-RUN yum install -y centos-release-scl && \
-    sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
-    sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
-    sed -i 's|^# baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
-    sed -i 's|^# baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
-
-# Install build tools
-RUN yum install -y \
-    devtoolset-2-gcc \
-    devtoolset-2-gcc-c++ \
-    devtoolset-2-binutils \
-    make \
-    && yum clean all
-
+# Set working directory
 WORKDIR /app
-COPY *.h *.cpp ./
 
-# AVX2 intrinsics are used in the code
-RUN scl enable devtoolset-2 "g++ -O2 -mavx2 -o benchmark \
-    main.cpp \
-    matrix_operations.cpp \
-    -std=c++11"
+# Copy source files
+COPY . .
 
-CMD ["./benchmark"]
+# Compile with ARM64 optimizations
+RUN g++ -std=c++17 -march=armv8-a+simd -O3 -o matrix_demo \
+    main.cpp matrix_operations.cpp
+
+# Run the application
+CMD ["./matrix_demo"]
