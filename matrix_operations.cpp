@@ -3,7 +3,12 @@
 #include <random>
 #include <chrono>
 #include <stdexcept>
-#include <immintrin.h>  // AVX2 intrinsics
+
+#ifdef __aarch64__
+#include <arm_neon.h>  // ARM NEON intrinsics
+#elif defined(__x86_64__)
+#include <immintrin.h>  // AVX2 intrinsics for x86
+#endif
 
 Matrix::Matrix(size_t r, size_t c) : rows(r), cols(c) {
     data.resize(rows, std::vector<double>(cols, 0.0));
@@ -28,7 +33,33 @@ Matrix Matrix::multiply(const Matrix& other) const {
 
     Matrix result(rows, other.cols);
 
-    // x86-64 optimized using AVX2 for double-precision
+#ifdef __aarch64__
+    // ARM64 optimized using NEON for double-precision
+    for (size_t i = 0; i < rows; i++) {
+        for (size_t j = 0; j < other.cols; j++) {
+            float64x2_t sum_vec = vdupq_n_f64(0.0);
+            size_t k = 0;
+
+            // Process 2 elements at a time with NEON (128-bit vectors)
+            for (; k + 1 < cols; k += 2) {
+                float64x2_t a_vec = vld1q_f64(&data[i][k]);
+                float64x2_t b_vec = {other.data[k][j], other.data[k+1][j]};
+                sum_vec = vfmaq_f64(sum_vec, a_vec, b_vec);
+            }
+
+            // Horizontal add using NEON
+            double sum = vgetq_lane_f64(sum_vec, 0) + vgetq_lane_f64(sum_vec, 1);
+
+            // Handle remaining elements
+            for (; k < cols; k++) {
+                sum += data[i][k] * other.data[k][j];
+            }
+
+            result.data[i][j] = sum;
+        }
+    }
+#elif defined(__x86_64__)
+    // x86-64 optimized using AVX2 for double-precision (original code)
     for (size_t i = 0; i < rows; i++) {
         for (size_t j = 0; j < other.cols; j++) {
             __m256d sum_vec = _mm256_setzero_pd();
@@ -63,6 +94,18 @@ Matrix Matrix::multiply(const Matrix& other) const {
             result.data[i][j] = sum;
         }
     }
+#else
+    // Fallback implementation for other architectures
+    for (size_t i = 0; i < rows; i++) {
+        for (size_t j = 0; j < other.cols; j++) {
+            double sum = 0.0;
+            for (size_t k = 0; k < cols; k++) {
+                sum += data[i][k] * other.data[k][j];
+            }
+            result.data[i][j] = sum;
+        }
+    }
+#endif
 
     return result;
 }
@@ -96,4 +139,12 @@ void benchmark_matrix_ops() {
     std::cout << "Matrix size: " << size << "x" << size << std::endl;
     std::cout << "Time: " << duration.count() << " ms" << std::endl;
     std::cout << "Result sum: " << c.sum() << std::endl;
+
+#ifdef __aarch64__
+    std::cout << "Architecture: ARM64 with NEON SIMD optimizations" << std::endl;
+#elif defined(__x86_64__)
+    std::cout << "Architecture: x86-64 with AVX2 optimizations" << std::endl;
+#else
+    std::cout << "Architecture: Generic (no SIMD optimizations)" << std::endl;
+#endif
 }
