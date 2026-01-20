@@ -1,7 +1,12 @@
+# ARM64-Optimized Multi-Architecture Dockerfile
 FROM ubuntu:22.04
 
 # Set environment to avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Set ARM-optimized build environment
+ENV CC=gcc
+ENV CXX=g++
 
 # Update package lists and install build tools
 RUN apt-get update && apt-get install -y \
@@ -14,10 +19,18 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY *.h *.cpp ./
 
-# Use ARM-optimized NEON intrinsics instead of AVX2
-# -march=armv8-a+simd enables NEON SIMD instructions
-# -mcpu=native optimizes for the specific ARM processor if available
-RUN g++ -O3 -march=armv8-a+simd -mcpu=generic -o benchmark \
+# ARM64-Optimized compilation with advanced performance flags
+# -O3: Maximum optimization level
+# -march=armv8-a+simd: Enable ARM NEON SIMD instructions for vectorization
+# -mcpu=generic: Optimize for general ARM64 processors 
+# -flto=auto: Link-time optimization with parallel processing (major performance boost)
+# -ffast-math: Aggressive math optimizations for improved performance
+# -funroll-loops: Unroll loops for better instruction-level parallelism
+# -ftree-vectorize: Enable automatic vectorization
+# -fomit-frame-pointer: Reduce function call overhead
+RUN g++ -O3 -march=armv8-a+simd -mcpu=generic -flto=auto \
+    -ffast-math -funroll-loops -ftree-vectorize -fomit-frame-pointer \
+    -o benchmark \
     main.cpp \
     matrix_operations.cpp \
     -std=c++11
